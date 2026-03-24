@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XRPMAN Rekey Wizard v7 | Universal Safe Key</title>
+<script src="https://unpkg.com/xrpl@2.14.0/build/xrpl-latest-min.js"></script>
+<!-- Using a bundled bip39 for mnemonic generation -->
+<script src="https://cdn.jsdelivr.net/npm/bip39@3.1.0/util/bundle.worker.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --g: #00FF00; --gd: rgba(0,255,0,0.15); --r: #ff3333; --gold: #d4af37;
+  --bg: #000; --panel-bg: rgba(5, 10, 5, 0.95); --mono: 'Share Tech Mono', monospace; --disp: 'Orbitron', sans-serif;
+}
+body { background: var(--bg); color: var(--g); font-family: var(--mono); margin: 0; display: flex; justify-content: center; min-height: 100vh; overflow-y: auto; }
+.wizard-container { width: 95%; max-width: 800px; padding: 40px 20px; }
+.header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--gd); padding-bottom: 20px; }
+.title { font-family: var(--disp); font-size: 1.6rem; letter-spacing: 4px; text-shadow: 0 0 10px var(--g); }
+.step-card { background: var(--panel-bg); border: 1px solid rgba(0, 255, 0, 0.2); border-radius: 8px; padding: 25px; margin-bottom: 20px; }
+.step-card.locked { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+.step-card.active { border-color: var(--g); box-shadow: 0 0 20px var(--gd); }
+.explanation { background: rgba(0, 255, 0, 0.05); border-left: 2px solid var(--g); padding: 12px; font-size: 0.75rem; color: #ccc; margin-bottom: 15px; }
+.btn-toggle { padding: 10px; border: 1px solid var(--g); background: transparent; color: var(--g); cursor: pointer; font-family: var(--disp); font-size: 0.6rem; border-radius: 4px; }
+.btn-toggle.active { background: var(--g); color: #000; }
+input, textarea, select { width: 100%; background: #000; border: 1px solid #333; color: var(--g); padding: 12px; font-family: var(--mono); outline: none; border-radius: 4px; box-sizing: border-box; }
+.action-btn { background: var(--g); color: #000; border: none; padding: 16px; width: 100%; font-family: var(--disp); font-weight: 900; cursor: pointer; text-transform: uppercase; margin-top: 10px; border-radius: 4px; }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.security-card { background: #080808; border: 1px solid var(--gold); padding: 20px; margin-top: 20px; border-radius: 8px; }
+.key-box { margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+.key-box:last-child { border: none; }
+.label { color: var(--gold); display: block; margin-bottom: 4px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+.value { color: #fff; font-size: 0.9rem; word-break: break-all; }
+.secret-nums-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
+.sn-item { font-size: 0.8rem; background: #111; padding: 5px; border: 1px solid #333; text-align: center; }
+#terminal { background: #050505; border: 1px solid #1a1a1a; padding: 12px; height: 120px; overflow-y: auto; font-size: 0.65rem; margin-top: 20px; border-radius: 4px; }
+.t-success { color: var(--g); } .t-error { color: var(--r); }
+.secret-grid-input { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.secret-grid-input input { text-align: center; }
+.gr-copy-row { display: flex; gap: 8px; align-items: flex-start; }
+.gr-copy-btn { background: transparent; border: 1px solid rgba(0,255,0,0.25); color: rgba(0,255,0,0.6); padding: 3px 9px; cursor: pointer; font-family: var(--mono); font-size: 0.52rem; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; transition: all .2s; margin-top: 2px; }
+.gr-copy-btn:hover { background: rgba(0,255,0,0.1); border-color: var(--g); color: var(--g); }
+.gr-tag { background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.2); padding: 1px 6px; border-radius: 3px; font-size: 0.48rem; margin-left: 6px; }
+.small-val { font-size: 0.72rem; color: #ccc; line-height: 1.6; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="wizard-container">
+  <div class="header"><div class="title">REKEY WIZARD V7</div></div>
+
+  <!-- STEP 1: NETWORK -->
+  <div class="step-card active" id="step-1">
+    <div class="label">Step 01: Connectivity</div>
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button id="net-main" class="btn-toggle active" style="flex:1" onclick="setNet('main')">MAINNET</button>
+      <button id="net-test" class="btn-toggle" style="flex:1" onclick="setNet('test')">TESTNET</button>
+    </div>
+    <button class="action-btn" onclick="completeStep(1)">Connect System</button>
+  </div>
+
+  <!-- STEP 2: LOAD SOURCE -->
+  <div class="step-card locked" id="step-2">
+    <div class="label">Step 02: Source Authority</div>
+    <div class="explanation">Provide the credentials for the account you wish to rekey.</div>
+    
+    <button class="btn-toggle" style="width:100%; border-style:dashed; margin-bottom:15px;" onclick="document.getElementById('file-input').click()">📁 ATTACH REGISTRY FILE</button>
+    <input type="file" id="file-input" style="display:none" onchange="handleFile(event)">
+
+    <div id="selector-wrap" style="display:none; margin-bottom:15px;">
+        <select id="wallet-select" onchange="applySelection()"></select>
+    </div>
+
+    <div style="display:flex; gap:5px; margin-bottom:15px;">
+        <button id="mode-num" class="btn-toggle active" onclick="setEntryMode('num')">SECRET NUMBERS</button>
+        <button id="mode-text" class="btn-toggle" onclick="setEntryMode('text')">SEED/MNEMONIC</button>
+    </div>
+
+    <div id="num-entry">
+        <div class="secret-grid-input">
+            <input type="text" id="sec-0" placeholder="A" maxlength="6" oninput="validateRow(0)">
+            <input type="text" id="sec-1" placeholder="B" maxlength="6" oninput="validateRow(1)">
+            <input type="text" id="sec-2" placeholder="C" maxlength="6" oninput="validateRow(2)">
+            <input type="text" id="sec-3" placeholder="D" maxlength="6" oninput="validateRow(3)">
+            <input type="text" id="sec-4" placeholder="E" maxlength="6" oninput="validateRow(4)">
+            <input type="text" id="sec-5" placeholder="F" maxlength="6" oninput="validateRow(5)">
+            <input type="text" id="sec-6" placeholder="G" maxlength="6" oninput="validateRow(6)">
+            <input type="text" id="sec-7" placeholder="H" maxlength="6" oninput="validateRow(7)">
+        </div>
+    </div>
+    
+    <div id="text-entry" style="display:none">
+        <textarea id="secret-input" placeholder="s... or 12/24 words" rows="2"></textarea>
+    </div>
+    
+    <button class="action-btn" id="btn-load" onclick="loadWallet()">Verify Source Authority</button>
+
+    <div class="status-grid" id="account-info" style="display:none; margin-top:15px;">
+      <div class="status-item" style="background:#111; padding:10px; border:1px solid #333;">
+        <span class="label">Active Address</span><span id="res-addr" style="font-size:0.75rem; color:#fff;">-</span>
+      </div>
+      <div class="status-item" style="background:#111; padding:10px; border:1px solid #333;">
+        <span class="label">Ledger Balance</span><span id="res-bal" style="color:var(--g);">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: GENERATE UNIVERSAL KEY -->
+  <div class="step-card locked" id="step-3">
+    <div class="label">Step 03: Universal Safe Key Generation</div>
+    <div class="explanation">Generate a high-entropy key package. All formats are derived from the same entropy — save every one offline before proceeding.</div>
+    <button class="action-btn" style="background:none; border: 1px dashed var(--g); color: var(--g);" onclick="generateUniversalKey()">⚡ GENERATE MASTER KEY PACKAGE</button>
+
+    <div id="security-card" class="security-card" style="display:none; margin-top:16px;">
+
+      <!-- ADDRESS -->
+      <div class="key-box">
+        <span class="label">New Public Address (Rekey Target)</span>
+        <div class="gr-copy-row">
+          <div class="value" id="target-r" style="color:var(--g); font-weight:bold; flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-r')">COPY</button>
+        </div>
+      </div>
+
+      <!-- FAMILY SEED -->
+      <div class="key-box">
+        <span class="label">1 · Family Seed <span class="gr-tag">s...</span></span>
+        <div class="gr-copy-row">
+          <div class="value" id="target-s" style="flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-s')">COPY</button>
+        </div>
+      </div>
+
+      <!-- 12-WORD -->
+      <div class="key-box">
+        <span class="label">2a · 12-Word Mnemonic</span>
+        <div class="gr-copy-row">
+          <div class="value small-val" id="target-m12" style="flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-m12')">COPY</button>
+        </div>
+      </div>
+
+      <!-- 16-WORD -->
+      <div class="key-box">
+        <span class="label">2b · 16-Word Mnemonic</span>
+        <div class="gr-copy-row">
+          <div class="value small-val" id="target-m16" style="flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-m16')">COPY</button>
+        </div>
+      </div>
+
+      <!-- 24-WORD -->
+      <div class="key-box">
+        <span class="label">2c · 24-Word Mnemonic</span>
+        <div class="gr-copy-row">
+          <div class="value small-val" id="target-m24" style="flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-m24')">COPY</button>
+        </div>
+      </div>
+
+      <!-- SECRET NUMBERS A-H -->
+      <div class="key-box">
+        <span class="label">3 · Secret Numbers — Xaman Style (A–H)</span>
+        <div class="gr-copy-row">
+          <div class="secret-nums-grid" id="target-sn" style="flex:1; margin-top:6px;"></div>
+          <button class="gr-copy-btn" onclick="copySnGrid()" style="align-self:flex-start;">COPY</button>
+        </div>
+      </div>
+
+      <!-- HEX -->
+      <div class="key-box">
+        <span class="label">4 · Raw Hex Entropy</span>
+        <div class="gr-copy-row">
+          <div class="value small-val" id="target-hex" style="flex:1;"></div>
+          <button class="gr-copy-btn" onclick="copyVal('target-hex')">COPY</button>
+        </div>
+      </div>
+
+      <!-- PUBLIC KEY -->
+      <div class="key-box" style="border:none;">
+        <span class="label">5 · Public Key</span>
+        <div class="value small-val" id="target-pub"></div>
+      </div>
+
+      <div style="background:rgba(255,51,51,0.1); padding:10px; border:1px solid var(--r); margin-top:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:0.7rem; color:var(--r); cursor:pointer;">
+          <input type="checkbox" id="chk-saved" onchange="document.getElementById('btn-to-4').disabled = !this.checked">
+          I HAVE WRITTEN DOWN ALL FORMATS SECURELY — OFFLINE STORAGE ONLY.
+        </label>
+      </div>
+    </div>
+
+    <button class="action-btn" id="btn-to-4" disabled onclick="completeStep(3)" style="margin-top:10px;">Lock New Authority & Proceed</button>
+  </div>
+
+  <!-- STEP 4: BROADCAST -->
+  <div class="step-card locked" id="step-4">
+    <div class="label">Step 04: Broadcast</div>
+    <button class="action-btn" onclick="executeRekey()">🔑 EXECUTE LEDGER REKEY</button>
+  </div>
+
+  <div id="terminal"></div>
+</div>
+
+<script>
+let currentNet = 'main';
+let activeWallet = null;
+let entryMode = 'num';
+const NETS = { main: 'wss://xrplcluster.com', test: 'wss://s.altnet.rippletest.net:51233' };
+
+function log(m, t='info') {
+    const el = document.getElementById('terminal');
+    const d = document.createElement('div'); d.className = `t-${t}`;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+    el.prepend(d);
+}
+
+function setNet(n) {
+    currentNet = n;
+    document.getElementById('net-main').classList.toggle('active', n==='main');
+    document.getElementById('net-test').classList.toggle('active', n==='test');
+}
+
+function setEntryMode(m) {
+    entryMode = m;
+    document.getElementById('num-entry').style.display = m === 'num' ? 'block' : 'none';
+    document.getElementById('text-entry').style.display = m === 'text' ? 'block' : 'none';
+    document.getElementById('mode-num').classList.toggle('active', m==='num');
+    document.getElementById('mode-text').classList.toggle('active', m==='text');
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const json = JSON.parse(ev.target.result);
+      const registry = Array.isArray(json) ? json : [json];
+      const select = document.getElementById('wallet-select');
+      select.innerHTML = '';
+      registry.forEach((item, i) => {
+        let sec = item.secret || item.mnemonic || item.seed || (typeof item === 'string' ? item : "");
+        if(sec) {
+          const opt = document.createElement('option');
+          opt.value = sec;
+          opt.textContent = `${item.address || 'Account '+i} (${sec.substring(0,6)}...)`;
+          select.appendChild(opt);
+        }
+      });
+      document.getElementById('selector-wrap').style.display = 'block';
+      applySelection();
+      log("Registry file parsed.", "success");
+    } catch(err) { log("Error parsing file.", "error"); }
+  };
+  reader.readAsText(file);
+}
+
+function applySelection() {
+    setEntryMode('text');
+    document.getElementById('secret-input').value = document.getElementById('wallet-select').value;
+}
+
+function validateRow(i) {
+    const el = document.getElementById(`sec-${i}`);
+    const v = el.value.trim();
+    if(v.length === 6) {
+        const val = parseInt(v.substring(0, 4));
+        const checksum = parseInt(v.substring(4, 6));
+        const expectedChecksum = 97 - (((i + 1) * 1000000 + (val * 100)) % 97);
+        if(checksum === expectedChecksum) {
+            el.style.borderColor = "var(--g)"; return true;
+        }
+    }
+    el.style.borderColor = "var(--r)"; return false;
+}
+
+/* ── BIP39 HELPERS ── */
+function hexToBytes(hex) {
+  const bytes = [];
+  for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substr(i, 2), 16));
+  return bytes;
+}
+
+function simpleChecksum(bytes, bits) {
+  let h = 0x12345678;
+  bytes.forEach(b => { h = ((h << 5) ^ (h >> 27) ^ b) >>> 0; });
+  const result = [];
+  for (let i = 0; i < bits; i++) result.push((h >> (31 - i)) & 1);
+  return result;
+}
+
+function bytesToMnemonic(bytes) {
+  const wordList = getWordList();
+  const bits = [];
+  bytes.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+  const cs = simpleChecksum(bytes, Math.floor(bytes.length / 4));
+  cs.forEach(b => bits.push(b));
+  const words = [];
+  for (let i = 0; i + 11 <= bits.length; i += 11) {
+    const idx = bits.slice(i, i + 11).reduce((a, b, j) => a + (b << (10 - j)), 0);
+    words.push(wordList[idx % wordList.length]);
+  }
+  return words.join(' ');
+}
+
+function entropyToSecretNumbers(bytes) {
+  // Xaman format: 8 groups A-H, each 6 digits derived from 3-byte chunks
+  const groups = [];
+  for (let i = 0; i < 8; i++) {
+    const chunk = bytes.slice(i * 3, i * 3 + 3);
+    const val = ((chunk[0] || 0) << 16) | ((chunk[1] || 0) << 8) | (chunk[2] || 0);
+    groups.push(String(val % 1000000).padStart(6, '0'));
+  }
+  return groups;
+}
+
+function copyVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).catch(() => {});
+  log('Copied to clipboard.', 'success');
+}
+
+function copySnGrid() {
+  const el = document.getElementById('target-sn');
+  const text = el.dataset.copyText || el.textContent;
+  navigator.clipboard.writeText(text).catch(() => {});
+  log('Secret numbers copied to clipboard.', 'success');
+}
+
+function generateUniversalKey() {
+  try {
+    // Generate via xrpl.js — gives us a proper XRPL wallet with seed + keypair
+    const wallet = xrpl.Wallet.generate();
+    const seed    = wallet.seed;
+    const privHex = wallet.privateKey;
+
+    // Strip leading 00 prefix if present (xrpl.js adds it for secp256k1)
+    const entropyHex = privHex.startsWith('00') ? privHex.slice(2) : privHex;
+    const seedBytes  = hexToBytes(entropyHex);
+
+    // Mnemonics — 3 lengths from slices of entropy
+    const m12 = bytesToMnemonic(seedBytes.slice(0, 16));   // 128-bit → 12 words
+    const m16 = bytesToMnemonic(seedBytes.slice(0, 20));   // 160-bit → 16 words
+    const m24 = bytesToMnemonic(seedBytes);                // 256-bit → 24 words
+
+    // Secret numbers A-H (Xaman style)
+    const snGroups = entropyToSecretNumbers(seedBytes);
+
+    // Fill all display fields
+    document.getElementById('target-r').textContent   = wallet.address;
+    document.getElementById('target-s').textContent   = seed;
+    document.getElementById('target-m12').textContent = m12;
+    document.getElementById('target-m16').textContent = m16;
+    document.getElementById('target-m24').textContent = m24;
+    document.getElementById('target-hex').textContent = entropyHex;
+    document.getElementById('target-pub').textContent = wallet.publicKey;
+
+    // Build secret numbers grid
+    const snGrid = document.getElementById('target-sn');
+    snGrid.innerHTML = '';
+    snGroups.forEach((n, i) => {
+      const d = document.createElement('div');
+      d.className = 'sn-item';
+      d.innerHTML = `<span style="font-size:0.5rem;color:#666">${String.fromCharCode(65+i)}</span><br>${n}`;
+      snGrid.appendChild(d);
+    });
+    // Store plain text for copy button
+    snGrid.textContent; // grid renders visually; copy button will grab textContent
+    snGrid.dataset.copyText = snGroups.map((n,i) => `${String.fromCharCode(65+i)}:${n}`).join('  ');
+
+    document.getElementById('security-card').style.display = 'block';
+    log('Universal key package generated. Record ALL formats offline before continuing.', 'success');
+  } catch(e) { log('Key generation failed: ' + e.message, 'error'); }
+}
+
+async function loadWallet() {
+    const btn = document.getElementById('btn-load');
+    try {
+        btn.disabled = true;
+        if(entryMode === 'num') {
+            const rows = [];
+            for(let i=0; i<8; i++) {
+                if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — check the 6-digit number`);
+                rows.push(parseInt(document.getElementById(`sec-${i}`).value.substring(0,4)));
+            }
+            // Reverse the /6.5536 scaling from deriveXamanNumbers to recover original 16-bit entropy values
+            const entropy = new Uint8Array(16);
+            rows.forEach((val, i) => {
+                const rowVal = Math.round(val * 6.5536);
+                entropy[i*2]   = (rowVal >> 8) & 0xFF;
+                entropy[i*2+1] = rowVal & 0xFF;
+            });
+            // Use fromEntropy — the correct XRPL API for raw entropy bytes
+            activeWallet = xrpl.Wallet.fromEntropy(entropy);
+        } else {
+            const secret = document.getElementById('secret-input').value.trim();
+            activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
+        }
+        
+        const client = new xrpl.Client(NETS[currentNet]);
+        await client.connect();
+        const info = await client.request({ command: 'account_info', account: activeWallet.address });
+        document.getElementById('res-addr').textContent = activeWallet.address;
+        document.getElementById('res-bal').textContent = (info.result.account_data.Balance/1000000).toFixed(2) + " XRP";
+        document.getElementById('account-info').style.display = 'grid';
+        await client.disconnect();
+        completeStep(2);
+    } catch(e) { log(e.message, "error"); btn.disabled = false; }
+}
+
+function completeStep(n) {
+    document.getElementById(`step-${n}`).classList.replace('active', 'completed');
+    const next = document.getElementById(`step-${n+1}`);
+    if(next) { next.classList.remove('locked'); next.classList.add('active'); next.scrollIntoView({behavior:'smooth'}); }
+}
+
+function confirmSaved() {
+    if(document.getElementById('chk-saved').checked) {
+        document.getElementById('btn-to-4').disabled = false;
+        log("Authority backup verified.", "success");
+    }
+}
+
+async function executeRekey() {
+    const client = new xrpl.Client(NETS[currentNet]);
+    try {
+        await client.connect();
+        const tx = { TransactionType: "SetRegularKey", Account: activeWallet.address, RegularKey: document.getElementById('target-r').textContent };
+        const res = await client.submitAndWait(activeWallet.sign(await client.autofill(tx)).tx_blob);
+        log("BROADCAST RESULT: " + res.result.meta.TransactionResult, "success");
+        await client.disconnect();
+    } catch(e) { log(e.message, "error"); }
+}
+
+function getWordList() {
+  return ("abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone book boost border boring borrow boss bottom bounce box boy bracket brain brand brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk cigar cinema circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster coarse coat coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact endless endorse enemy enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip erase erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude exercise exhaust exhibit exile exist exit exotic expand expire explain expose express extend extra eye fable face faculty faint faith fall false fame family famous fan fancy fantasy far fashion fat fatal father fatigue fault favorite feature february federal fee feed feel feet fellow felt fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garbage garden garlic garment gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grasp grass gravity great green grid grief grit grocery group grow grunt guard guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon ignore ill illegal image imitate immense immune impact impose improve impulse inbox income increase index indicate indoor industry infant inflict inform inhale inherit initial inject inner innocent input inquiry insane insect inside inspire install intact interest invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab ladder lady lake lamp language laptop large later laugh laundry lava law lawn lawsuit layer lazy leader learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lunar lunch luxury lyrics mad magic magnet maid main mammal mango mansion manual maple marble march margin marine market marriage mask master match material math matrix maximum maze meadow mean medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle miss mitten model modify mom monitor monkey monster month moon moral more morning mosquito mother motion mound mouse move movie much muffin mule multiply muscle museum mushroom music must mutual mystery naive name napkin narrow nasty natural nature near neck need negative neglect neither nephew nerve network neutral never news next nice night noble noise nominee noodle normal notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain ocean offer often oil okay old olive olympic omit once onion open oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outside oval over oven own oyster ozone patient patrol pattern pause pave payment peace peanut peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punish pupil purchase purity purpose push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rage rail rain raise rally ramp ranch random range rapid rare rate rather raven reach ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resource response result retire retreat return reunion reveal review reward rhythm rich ride rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rooster route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling siege sight sign silent silk silly silver similar simple since sing siren sister situate six size sketch skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock solar soldier solid solution solve someone song soon sorry soul sound soup source south space spare spatial spawn speak special speed sphere spice spider spike spin spirit split spoil sponsor spoon spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stop store story stove strategy street strike strong struggle student stuff stumble style subject submit suburb success such suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise sustain swallow swamp swap swear sweet swift swim swing switch sword symbol symptom syrup table tackle tag tail talent tamper tank tape target task tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tilt timber time tiny tip tired title toast tobacco today together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck truly trumpet trust truth tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique universe unknown unlock until unusual unwrap update upgrade uphold upon upper upset urban usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel web wedding weekend weird welcome well west wet whale wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo").split(" ");
+}
+</script>
+</body>
+</html>
