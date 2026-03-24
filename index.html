@@ -263,13 +263,9 @@ function applySelection() {
 function validateRow(i) {
     const el = document.getElementById(`sec-${i}`);
     const v = el.value.trim();
-    if(v.length === 6) {
-        const val = parseInt(v.substring(0, 4));
-        const checksum = parseInt(v.substring(4, 6));
-        const expectedChecksum = 97 - (((i + 1) * 1000000 + (val * 100)) % 97);
-        if(checksum === expectedChecksum) {
-            el.style.borderColor = "var(--g)"; return true;
-        }
+    // Xaman numbers: exactly 6 digits, all numeric
+    if(v.length === 6 && /^\d{6}$/.test(v)) {
+        el.style.borderColor = "var(--g)"; return true;
     }
     el.style.borderColor = "var(--r)"; return false;
 }
@@ -381,17 +377,17 @@ async function loadWallet() {
         if(entryMode === 'num') {
             const rows = [];
             for(let i=0; i<8; i++) {
-                if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — check the 6-digit number`);
-                rows.push(parseInt(document.getElementById(`sec-${i}`).value.substring(0,4)));
+                if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — must be exactly 6 digits`);
+                rows.push(parseInt(document.getElementById(`sec-${i}`).value.trim()));
             }
-            // Reverse the /6.5536 scaling from deriveXamanNumbers to recover original 16-bit entropy values
-            const entropy = new Uint8Array(16);
+            // Reconstruct entropy: each 6-digit number came from a 3-byte chunk (val % 1000000)
+            // We reverse by treating the number directly as a 3-byte big-endian value
+            const entropy = new Uint8Array(24);
             rows.forEach((val, i) => {
-                const rowVal = Math.round(val * 6.5536);
-                entropy[i*2]   = (rowVal >> 8) & 0xFF;
-                entropy[i*2+1] = rowVal & 0xFF;
+                entropy[i*3]   = (val >> 16) & 0xFF;
+                entropy[i*3+1] = (val >> 8)  & 0xFF;
+                entropy[i*3+2] = val & 0xFF;
             });
-            // Use fromEntropy — the correct XRPL API for raw entropy bytes
             activeWallet = xrpl.Wallet.fromEntropy(entropy);
         } else {
             const secret = document.getElementById('secret-input').value.trim();
