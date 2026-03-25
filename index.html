@@ -390,7 +390,9 @@ async function loadWallet() {
                 entropy[i*2]   = (rowVal >> 8) & 0xFF;
                 entropy[i*2+1] = rowVal & 0xFF;
             }
-            activeWallet = xrpl.Wallet.fromEntropy(entropy);
+            // Xaman uses secp256k1 — encode entropy as a family seed then derive
+            const familySeed = xrpl.encodeSeed(entropy);  // defaults to secp256k1
+            activeWallet = xrpl.Wallet.fromSeed(familySeed);
         } else {
             const secret = document.getElementById('secret-input').value.trim();
             activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
