@@ -366,9 +366,18 @@ function setKeyMode(mode) {
 }
 
 function useExistingWallet() {
-    const addr = document.getElementById('existing-addr').value.trim();
+    let addr = document.getElementById('existing-addr').value.trim();
+    // Base58 never contains 0 (zero), O (capital o), I (capital i), l (lowercase L)
+    // Common phone keyboard mistake: 0 instead of Q near the start of XRPL addresses
+    addr = addr.replace(/0/g, 'Q').replace(/O/g, 'Q').replace(/I/g, 'l');
+    document.getElementById('existing-addr').value = addr;
     if(!addr.startsWith('r') || addr.length < 25) {
         log('Invalid address — must be a valid r-address.', 'error');
+        return;
+    }
+    // Final check — no invalid base58 chars
+    if(/[0OIl]/.test(addr)) {
+        log('Address contains invalid characters (0, O, I, or l). Check and correct it.', 'error');
         return;
     }
     // Set just the address field; hide the full key package card since user already has their keys
