@@ -52,8 +52,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
   <div class="step-card active" id="step-1">
     <div class="label">Step 01: Connectivity</div>
     <div style="display:flex; gap:10px; margin-top:10px;">
-      <button id="net-main" class="btn-toggle active" style="flex:1" onclick="setNet('main')">MAINNET</button>
-      <button id="net-test" class="btn-toggle" style="flex:1" onclick="setNet('test')">TESTNET</button>
+      <div style="text-align:center; color:var(--g); font-family:var(--disp); font-size:0.7rem; letter-spacing:2px; padding:8px; border:1px solid var(--g); background:rgba(0,255,0,0.08);">🔒 MAINNET ONLY</div>
     </div>
     <button class="action-btn" onclick="completeStep(1)">Connect System</button>
   </div>
@@ -106,9 +105,26 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 
   <!-- STEP 3: GENERATE UNIVERSAL KEY -->
   <div class="step-card locked" id="step-3">
-    <div class="label">Step 03: Universal Safe Key Generation</div>
-    <div class="explanation">Generate a high-entropy key package. All formats are derived from the same entropy — save every one offline before proceeding.</div>
-    <button class="action-btn" style="background:none; border: 1px dashed var(--g); color: var(--g);" onclick="generateUniversalKey()">⚡ GENERATE MASTER KEY PACKAGE</button>
+    <div class="label">Step 03: New Key Authority</div>
+    <div class="explanation">Either paste an existing wallet address you already control, or generate a brand new key package now.</div>
+
+    <!-- OPTION TOGGLE -->
+    <div style="display:flex; gap:5px; margin-bottom:15px;">
+      <button id="mode-existing" class="btn-toggle" onclick="setKeyMode('existing')">USE EXISTING WALLET</button>
+      <button id="mode-generate" class="btn-toggle active" onclick="setKeyMode('generate')">GENERATE NEW WALLET</button>
+    </div>
+
+    <!-- EXISTING WALLET INPUT -->
+    <div id="existing-entry" style="display:none; margin-bottom:12px;">
+      <div class="explanation" style="margin-bottom:8px;">Enter the r-address of the wallet you already control. This will become the new signing authority.</div>
+      <input type="text" id="existing-addr" placeholder="rXXXXX... paste your existing wallet address" style="width:100%; background:#000; border:1px solid #333; color:var(--g); padding:12px; font-family:var(--mono); box-sizing:border-box; border-radius:4px;">
+      <button class="action-btn" style="margin-top:8px;" onclick="useExistingWallet()">✔ USE THIS ADDRESS</button>
+    </div>
+
+    <!-- GENERATE NEW -->
+    <div id="generate-entry">
+      <button class="action-btn" style="background:none; border: 1px dashed var(--g); color: var(--g);" onclick="generateUniversalKey()">⚡ GENERATE MASTER KEY PACKAGE</button>
+    </div>
 
     <div id="security-card" class="security-card" style="display:none; margin-top:16px;">
 
@@ -195,7 +211,29 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
   <!-- STEP 4: BROADCAST -->
   <div class="step-card locked" id="step-4">
     <div class="label">Step 04: Broadcast</div>
+    <div class="explanation">Execute the rekey transaction. This signs with your OLD key and sets the new address as the Regular Key on the ledger.</div>
     <button class="action-btn" onclick="executeRekey()">🔑 EXECUTE LEDGER REKEY</button>
+  </div>
+
+  <!-- STEP 5: DISABLE MASTER KEY -->
+  <div class="step-card locked" id="step-5">
+    <div class="label">Step 05: Disable Master Key</div>
+    <div class="explanation" style="border-color:var(--r); color:#ffaa00;">
+      ⚠ This permanently disables the old compromised seed. After this, ONLY your new key controls this wallet. This cannot be undone without the new key. Only do this after confirming your new key loads the correct wallet address.
+    </div>
+    <div style="background:#0a0000; border:1px solid var(--r); padding:12px; margin-bottom:12px; font-size:0.72rem; color:#ccc; line-height:1.6;">
+      <strong style="color:var(--r);">Before pressing the button below, confirm:</strong><br>
+      1. Your new key (Step 3) loads address: <span id="confirm-new-addr" style="color:var(--g);">—</span><br>
+      2. XRPScan shows that address as the Regular Key on your account<br>
+      3. You have your new key saved securely offline
+    </div>
+    <label style="display:flex; align-items:center; gap:10px; font-size:0.7rem; color:var(--r); cursor:pointer; margin-bottom:12px;">
+      <input type="checkbox" id="chk-disable-confirm">
+      I CONFIRM ALL THREE CONDITIONS ABOVE. DISABLE THE OLD MASTER KEY.
+    </label>
+    <button class="action-btn" style="background:var(--r); color:#fff; border-color:var(--r);" onclick="disableMasterKey()">
+      ☠ DISABLE MASTER KEY — LOCK OUT OLD SEED PERMANENTLY
+    </button>
   </div>
 
   <div id="terminal"></div>
@@ -205,7 +243,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 let currentNet = 'main';
 let activeWallet = null;
 let entryMode = 'num';
-const NETS = { main: 'wss://xrplcluster.com', test: 'wss://s.altnet.rippletest.net:51233' };
+const NETS = { main: 'wss://xrplcluster.com' };
 
 function log(m, t='info') {
     const el = document.getElementById('terminal');
@@ -214,11 +252,7 @@ function log(m, t='info') {
     el.prepend(d);
 }
 
-function setNet(n) {
-    currentNet = n;
-    document.getElementById('net-main').classList.toggle('active', n==='main');
-    document.getElementById('net-test').classList.toggle('active', n==='test');
-}
+// Network locked to MAINNET only
 
 function setEntryMode(m) {
     entryMode = m;
@@ -324,6 +358,29 @@ function copySnGrid() {
   log('Secret numbers copied to clipboard.', 'success');
 }
 
+function setKeyMode(mode) {
+    document.getElementById('mode-existing').classList.toggle('active', mode === 'existing');
+    document.getElementById('mode-generate').classList.toggle('active', mode === 'generate');
+    document.getElementById('existing-entry').style.display = mode === 'existing' ? 'block' : 'none';
+    document.getElementById('generate-entry').style.display = mode === 'generate' ? 'block' : 'none';
+}
+
+function useExistingWallet() {
+    const addr = document.getElementById('existing-addr').value.trim();
+    if(!addr.startsWith('r') || addr.length < 25) {
+        log('Invalid address — must be a valid r-address.', 'error');
+        return;
+    }
+    // Set just the address field; hide the full key package card since user already has their keys
+    document.getElementById('target-r').textContent = addr;
+    document.getElementById('security-card').style.display = 'none';
+    document.getElementById('confirm-new-addr').textContent = addr;
+    // Enable the proceed button directly — user already has their keys saved
+    document.getElementById('btn-to-4').disabled = false;
+    log('Existing wallet address set as rekey target: ' + addr, 'success');
+    log('Make sure you have the keys to this wallet saved before proceeding.', 'info');
+}
+
 function generateUniversalKey() {
   try {
     // Generate via xrpl.js — gives us a proper XRPL wallet with seed + keypair
@@ -378,35 +435,45 @@ async function loadWallet() {
             for(let i=0; i<8; i++) {
                 if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — must be exactly 6 digits`);
             }
-            // REAL Xaman reconstruction:
-            // Each 6-digit number: first 4 digits = value (0-9999), last 2 = checksum (ignored for derivation)
-            // Original entropy: val = floor(rowVal / 6.5536), so rowVal = round(val * 6.5536)
-            // 8 values × 2 bytes each = 16 bytes of entropy → family seed
+            // Xaman: first 4 digits = value (0-9999), reverse floor(x/6.5536) to get 2 bytes
+            // 8 groups x 2 bytes = 16 bytes entropy, secp256k1 algorithm (Xaman default)
             const entropy = new Uint8Array(16);
             for(let i=0; i<8; i++) {
-                const v = document.getElementById(`sec-${i}`).value.trim();
-                const val    = parseInt(v.substring(0, 4));          // first 4 digits only
-                const rowVal = Math.round(val * 6.5536);             // reverse the floor(x/6.5536)
+                const v      = document.getElementById(`sec-${i}`).value.trim();
+                const val    = parseInt(v.substring(0, 4));
+                const rowVal = Math.round(val * 6.5536);
                 entropy[i*2]   = (rowVal >> 8) & 0xFF;
                 entropy[i*2+1] = rowVal & 0xFF;
             }
-            // Xaman uses secp256k1 — encode entropy as a family seed then derive
-            const familySeed = xrpl.encodeSeed(entropy);  // defaults to secp256k1
-            activeWallet = xrpl.Wallet.fromSeed(familySeed);
+            log('Entropy reconstructed. Deriving wallet via secp256k1...', 'info');
+            activeWallet = xrpl.Wallet.fromEntropy(entropy, { algorithm: 'ecdsa-secp256k1' });
         } else {
             const secret = document.getElementById('secret-input').value.trim();
             activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
         }
-        
-        const client = new xrpl.Client(NETS[currentNet]);
-        await client.connect();
-        const info = await client.request({ command: 'account_info', account: activeWallet.address });
+
+        // Show derived address IMMEDIATELY so user can verify it matches their wallet
         document.getElementById('res-addr').textContent = activeWallet.address;
-        document.getElementById('res-bal').textContent = (info.result.account_data.Balance/1000000).toFixed(2) + " XRP";
+        document.getElementById('res-bal').textContent = 'Looking up...';
         document.getElementById('account-info').style.display = 'grid';
-        await client.disconnect();
-        completeStep(2);
-    } catch(e) { log(e.message, "error"); btn.disabled = false; }
+        log(`Derived address: ${activeWallet.address}`, 'info');
+        log('Does the address above match your NFT wallet address?', 'info');
+
+        const client = new xrpl.Client(NETS[currentNet]);
+        try {
+            await client.connect();
+            const info = await client.request({ command: 'account_info', account: activeWallet.address });
+            document.getElementById('res-bal').textContent = (info.result.account_data.Balance/1000000).toFixed(2) + ' XRP';
+            await client.disconnect();
+            completeStep(2);
+        } catch(ledgerErr) {
+            await client.disconnect().catch(()=>{});
+            document.getElementById('res-bal').textContent = 'Not found on ledger';
+            log(`Ledger lookup failed: ${ledgerErr.message}`, 'error');
+            log(`If the address above is correct, make sure MAINNET is selected. If the address is WRONG, the secret numbers are decoding to a different wallet.`, 'error');
+            btn.disabled = false;
+        }
+    } catch(e) { log(`Derivation error: ${e.message}`, 'error'); btn.disabled = false; }
 }
 
 function completeStep(n) {
@@ -430,7 +497,51 @@ async function executeRekey() {
         const res = await client.submitAndWait(activeWallet.sign(await client.autofill(tx)).tx_blob);
         log("BROADCAST RESULT: " + res.result.meta.TransactionResult, "success");
         await client.disconnect();
+        // Unlock step 5 and show the new address for confirmation
+        const newAddr = document.getElementById('target-r').textContent;
+        document.getElementById('confirm-new-addr').textContent = newAddr;
+        completeStep(4);
     } catch(e) { log(e.message, "error"); }
+}
+
+async function disableMasterKey() {
+    if(!document.getElementById('chk-disable-confirm').checked) {
+        log('You must check the confirmation box before disabling the master key.', 'error');
+        return;
+    }
+    if(!activeWallet) {
+        log('Source wallet not loaded. Complete Step 2 first.', 'error');
+        return;
+    }
+    const newRegularKey = document.getElementById('target-r').textContent;
+    if(!newRegularKey || !newRegularKey.startsWith('r')) {
+        log('New key address not found. Complete Steps 3 and 4 first.', 'error');
+        return;
+    }
+    const client = new xrpl.Client(NETS[currentNet]);
+    try {
+        await client.connect();
+        log('Connected. Broadcasting DisableMaster transaction...', 'info');
+        const tx = {
+            TransactionType: "AccountSet",
+            Account: activeWallet.address,
+            SetFlag: 4  // asfDisableMaster
+        };
+        const prepared = await client.autofill(tx);
+        const signed   = activeWallet.sign(prepared);
+        const res      = await client.submitAndWait(signed.tx_blob);
+        const result   = res.result.meta.TransactionResult;
+        await client.disconnect();
+        if(result === 'tesSUCCESS') {
+            log('MASTER KEY DISABLED SUCCESSFULLY. The old compromised seed can no longer control this wallet.', 'success');
+            log('Your wallet is now secured. Only the new key you generated controls it.', 'success');
+        } else {
+            log('Transaction returned: ' + result, 'error');
+        }
+    } catch(e) {
+        log('DisableMaster error: ' + e.message, 'error');
+        await client.disconnect().catch(()=>{});
+    }
 }
 
 function getWordList() {
