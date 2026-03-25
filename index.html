@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>XRPMAN Rekey Wizard v7 | Universal Safe Key</title>
 
-<!-- Buffer polyfill - MUST be FIRST (fixes "buffer is not defined") -->
+<!-- Buffer polyfill -->
 <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/buffer.min.js"></script>
 <script>
   window.Buffer = window.Buffer || Buffer;
@@ -14,13 +14,13 @@
 <!-- XRPL.js -->
 <script src="https://unpkg.com/xrpl@2.14.0/build/xrpl-latest-min.js"></script>
 
-<!-- BIP39 bundle -->
+<!-- BIP39 -->
 <script src="https://cdn.jsdelivr.net/npm/bip39@3.1.0/util/bundle.worker.min.js"></script>
 
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
-<!-- CSP to help external scripts and WebSockets on Vercel -->
+<!-- CSP -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' wss://*.ripple.com wss://xrplcluster.com wss://xrpl.ws;">
 
 <style>
@@ -49,7 +49,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 .value { color: #fff; font-size: 0.9rem; word-break: break-all; }
 .secret-nums-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 5px; }
 .sn-item { font-size: 0.8rem; background: #111; padding: 5px; border: 1px solid #333; text-align: center; }
-#terminal { background: #050505; border: 1px solid #1a1a1a; padding: 12px; height: 160px; overflow-y: auto; font-size: 0.65rem; margin-top: 20px; border-radius: 4px; }
+#terminal { background: #050505; border: 1px solid #1a1a1a; padding: 12px; height: 180px; overflow-y: auto; font-size: 0.65rem; margin-top: 20px; border-radius: 4px; }
 .t-success { color: var(--g); } .t-error { color: var(--r); }
 .secret-grid-input { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
 .secret-grid-input input { text-align: center; }
@@ -62,10 +62,61 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 </head>
 <body>
 
+<!-- SPLASH SCREEN -->
+<div id="splash" style="position:fixed; inset:0; background:#000; z-index:999; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div style="max-width:560px; width:100%; border:1px solid rgba(0,255,0,0.4); padding:32px; background:rgba(5,10,5,0.98); box-shadow:0 0 60px rgba(0,255,0,0.15);">
+    <div style="font-family:'Orbitron',sans-serif; font-size:1.4rem; font-weight:900; color:#00FF00; letter-spacing:4px; text-align:center; margin-bottom:6px; text-shadow:0 0 20px rgba(0,255,0,0.6);">
+      REKEY WIZARD
+    </div>
+    <div style="font-family:'Orbitron',sans-serif; font-size:0.5rem; letter-spacing:6px; color:rgba(0,255,0,0.5); text-align:center; margin-bottom:24px;">
+      POWERED BY XRPMAN PRODUCTIONS
+    </div>
+
+    <div style="border-left:2px solid #00FF00; padding-left:14px; margin-bottom:20px;">
+      <div style="font-size:0.75rem; color:#ccc; line-height:1.8;">
+        This tool lets you <strong style="color:#00FF00;">change the key</strong> that controls your XRPL wallet — without moving your XRP, NFTs, or tokens anywhere.
+      </div>
+    </div>
+
+    <div style="font-family:'Orbitron',sans-serif; font-size:0.55rem; color:rgba(0,255,0,0.6); letter-spacing:2px; margin-bottom:10px;">HOW IT WORKS</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; font-size:0.72rem; color:#ccc; line-height:1.6;">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">01</span>
+        <span><strong style="color:#fff;">Connect</strong> — Choose Mainnet or Testnet</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">02</span>
+        <span><strong style="color:#fff;">Load your compromised wallet</strong> — Enter the seed or phrase.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">03</span>
+        <span><strong style="color:#fff;">Set the new key</strong> — Generate or use existing.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">04</span>
+        <span><strong style="color:#fff;">Broadcast</strong> — Send rekey transaction.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#ff3333; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">05</span>
+        <span><strong style="color:#fff;">Disable old key</strong> — Lock out compromised seed.</span>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,51,51,0.08); border:1px solid rgba(255,51,51,0.4); padding:12px; margin-bottom:20px; font-size:0.68rem; color:#ffaa00; line-height:1.6;">
+      ⚠ Secrets never leave your device. All signing is local.
+    </div>
+
+    <button onclick="document.getElementById('splash').style.display='none'; completeStep(0);"
+            style="width:100%; background:#00FF00; color:#000; border:none; padding:16px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:0.75rem; letter-spacing:3px; cursor:pointer; text-transform:uppercase;">
+      ENTER REKEY WIZARD →
+    </button>
+  </div>
+</div>
+
 <div class="wizard-container">
   <div class="header"><div class="title">REKEY WIZARD V7</div></div>
 
-  <!-- STEP 1: NETWORK -->
+  <!-- STEP 1 -->
   <div class="step-card active" id="step-1">
     <div class="label">Step 01: Connectivity</div>
     <div style="display:flex; gap:10px; margin-top:10px;">
@@ -75,7 +126,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
     <button class="action-btn" onclick="completeStep(1)">Connect System</button>
   </div>
 
-  <!-- STEP 2: LOAD SOURCE -->
+  <!-- STEP 2 -->
   <div class="step-card locked" id="step-2">
     <div class="label">Step 02: Source Authority</div>
     <div class="explanation">Provide the credentials for the account you wish to rekey.</div>
@@ -121,7 +172,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
     </div>
   </div>
 
-  <!-- STEP 3: GENERATE UNIVERSAL KEY -->
+  <!-- STEP 3 -->
   <div class="step-card locked" id="step-3">
     <div class="label">Step 03: Universal Safe Key Generation</div>
     <div class="explanation">Generate a high-entropy key package. All formats are derived from the same entropy — save every one offline before proceeding.</div>
@@ -193,28 +244,28 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
     <button class="action-btn" id="btn-to-4" disabled onclick="completeStep(3)" style="margin-top:10px;">Lock New Authority & Proceed</button>
   </div>
 
-  <!-- STEP 4: BROADCAST -->
+  <!-- STEP 4 -->
   <div class="step-card locked" id="step-4">
     <div class="label">Step 04: Broadcast</div>
-    <div class="explanation">Execute the rekey transaction. This signs with your OLD key and sets the new address as the Regular Key.</div>
+    <div class="explanation">Execute the rekey transaction.</div>
     <button class="action-btn" onclick="executeRekey()">🔑 EXECUTE LEDGER REKEY</button>
   </div>
 
-  <!-- STEP 5: DISABLE MASTER KEY -->
+  <!-- STEP 5 -->
   <div class="step-card locked" id="step-5">
     <div class="label">Step 05: Disable Master Key</div>
     <div class="explanation" style="border-color:var(--r); color:#ffaa00;">
-      ⚠ This permanently disables the old compromised seed. After this, ONLY your new key controls this wallet.
+      ⚠ This permanently disables the old compromised seed.
     </div>
     <div style="background:#0a0000; border:1px solid var(--r); padding:12px; margin-bottom:12px; font-size:0.72rem; color:#ccc; line-height:1.6;">
-      <strong style="color:var(--r);">Before pressing the button below, confirm:</strong><br>
-      1. Your new key (Step 3) loads address: <span id="confirm-new-addr" style="color:var(--g);">—</span><br>
-      2. XRPScan shows that address as the Regular Key on your account<br>
-      3. You have your new key saved securely offline
+      <strong style="color:var(--r);">Before pressing:</strong><br>
+      1. New key address: <span id="confirm-new-addr" style="color:var(--g);">—</span><br>
+      2. Check on XRPScan<br>
+      3. New key saved offline
     </div>
     <label style="display:flex; align-items:center; gap:10px; font-size:0.7rem; color:var(--r); cursor:pointer; margin-bottom:12px;">
       <input type="checkbox" id="chk-disable-confirm">
-      I CONFIRM ALL THREE CONDITIONS ABOVE. DISABLE THE OLD MASTER KEY.
+      I CONFIRM ALL CONDITIONS.
     </label>
     <button class="action-btn" style="background:var(--r); color:#fff;" onclick="disableMasterKey()">
       ☠ DISABLE MASTER KEY — LOCK OUT OLD SEED PERMANENTLY
@@ -228,6 +279,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 let currentNet = 'main';
 let activeWallet = null;
 let entryMode = 'num';
+let rekeyCompleted = false;
 
 const NETS = {
   main: 'wss://s1.ripple.com',
@@ -235,26 +287,30 @@ const NETS = {
 };
 
 function log(m, t='info') {
-    const el = document.getElementById('terminal');
-    if (!el) return;
-    const d = document.createElement('div'); 
-    d.className = `t-${t}`;
-    d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
-    el.prepend(d);
+  const el = document.getElementById('terminal');
+  if (!el) return;
+  const d = document.createElement('div');
+  d.className = `t-${t}`;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${m}`;
+  el.prepend(d);
+}
+
+function showProcessing(msg) {
+  log(msg + " — please wait...", "info");
 }
 
 function setNet(n) {
-    currentNet = n;
-    document.getElementById('net-main').classList.toggle('active', n==='main');
-    document.getElementById('net-test').classList.toggle('active', n==='test');
+  currentNet = n;
+  document.getElementById('net-main').classList.toggle('active', n==='main');
+  document.getElementById('net-test').classList.toggle('active', n==='test');
 }
 
 function setEntryMode(m) {
-    entryMode = m;
-    document.getElementById('num-entry').style.display = m === 'num' ? 'block' : 'none';
-    document.getElementById('text-entry').style.display = m === 'text' ? 'block' : 'none';
-    document.getElementById('mode-num').classList.toggle('active', m==='num');
-    document.getElementById('mode-text').classList.toggle('active', m==='text');
+  entryMode = m;
+  document.getElementById('num-entry').style.display = m === 'num' ? 'block' : 'none';
+  document.getElementById('text-entry').style.display = m === 'text' ? 'block' : 'none';
+  document.getElementById('mode-num').classList.toggle('active', m==='num');
+  document.getElementById('mode-text').classList.toggle('active', m==='text');
 }
 
 function handleFile(e) {
@@ -285,20 +341,20 @@ function handleFile(e) {
 }
 
 function applySelection() {
-    setEntryMode('text');
-    document.getElementById('secret-input').value = document.getElementById('wallet-select').value;
+  setEntryMode('text');
+  document.getElementById('secret-input').value = document.getElementById('wallet-select').value;
 }
 
 function validateRow(i) {
-    const el = document.getElementById(`sec-${i}`);
-    const v = el.value.trim();
-    if(v.length === 6 && /^\d{6}$/.test(v)) {
-        el.style.borderColor = "var(--g)"; return true;
-    }
-    el.style.borderColor = "var(--r)"; return false;
+  const el = document.getElementById(`sec-${i}`);
+  const v = el.value.trim();
+  if(v.length === 6 && /^\d{6}$/.test(v)) {
+    el.style.borderColor = "var(--g)"; return true;
+  }
+  el.style.borderColor = "var(--r)"; return false;
 }
 
-/* ── HELPERS ── */
+/* Helpers (hexToBytes, bytesToMnemonic, etc.) */
 function hexToBytes(hex) {
   const bytes = [];
   for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.substr(i, 2), 16));
@@ -341,133 +397,130 @@ function copyVal(id) {
   const el = document.getElementById(id);
   if (!el) return;
   navigator.clipboard.writeText(el.textContent).catch(() => {});
-  log('Copied to clipboard.', 'success');
+  log('Copied.', 'success');
 }
 
 function copySnGrid() {
   const el = document.getElementById('target-sn');
   const text = el.dataset.copyText || el.textContent;
   navigator.clipboard.writeText(text).catch(() => {});
-  log('Secret numbers copied to clipboard.', 'success');
+  log('Secret numbers copied.', 'success');
 }
 
 function generateUniversalKey() {
-  try {
-    const wallet = xrpl.Wallet.generate();
-    const seed    = wallet.seed;
-    const privHex = wallet.privateKey;
-    const entropyHex = privHex.startsWith('00') ? privHex.slice(2) : privHex;
-    const seedBytes  = hexToBytes(entropyHex);
+  showProcessing("Generating key package");
+  setTimeout(() => {
+    try {
+      const wallet = xrpl.Wallet.generate();
+      const seed = wallet.seed;
+      const privHex = wallet.privateKey;
+      const entropyHex = privHex.startsWith('00') ? privHex.slice(2) : privHex;
+      const seedBytes = hexToBytes(entropyHex);
 
-    const m12 = bytesToMnemonic(seedBytes.slice(0, 16));
-    const m16 = bytesToMnemonic(seedBytes.slice(0, 20));
-    const m24 = bytesToMnemonic(seedBytes);
-    const snGroups = entropyToSecretNumbers(seedBytes);
+      const m12 = bytesToMnemonic(seedBytes.slice(0, 16));
+      const m16 = bytesToMnemonic(seedBytes.slice(0, 20));
+      const m24 = bytesToMnemonic(seedBytes);
+      const snGroups = entropyToSecretNumbers(seedBytes);
 
-    document.getElementById('target-r').textContent   = wallet.address;
-    document.getElementById('target-s').textContent   = seed;
-    document.getElementById('target-m12').textContent = m12;
-    document.getElementById('target-m16').textContent = m16;
-    document.getElementById('target-m24').textContent = m24;
-    document.getElementById('target-hex').textContent = entropyHex;
-    document.getElementById('target-pub').textContent = wallet.publicKey;
+      document.getElementById('target-r').textContent = wallet.address;
+      document.getElementById('target-s').textContent = seed;
+      document.getElementById('target-m12').textContent = m12;
+      document.getElementById('target-m16').textContent = m16;
+      document.getElementById('target-m24').textContent = m24;
+      document.getElementById('target-hex').textContent = entropyHex;
+      document.getElementById('target-pub').textContent = wallet.publicKey;
 
-    const snGrid = document.getElementById('target-sn');
-    snGrid.innerHTML = '';
-    snGroups.forEach((n, i) => {
-      const d = document.createElement('div');
-      d.className = 'sn-item';
-      d.innerHTML = `<span style="font-size:0.5rem;color:#666">\( {String.fromCharCode(65+i)}</span><br> \){n}`;
-      snGrid.appendChild(d);
-    });
-    snGrid.dataset.copyText = snGroups.map((n,i) => `\( {String.fromCharCode(65+i)}: \){n}`).join('  ');
+      const snGrid = document.getElementById('target-sn');
+      snGrid.innerHTML = '';
+      snGroups.forEach((n, i) => {
+        const d = document.createElement('div');
+        d.className = 'sn-item';
+        d.innerHTML = `<span style="font-size:0.5rem;color:#666">\( {String.fromCharCode(65+i)}</span><br> \){n}`;
+        snGrid.appendChild(d);
+      });
+      snGrid.dataset.copyText = snGroups.map((n,i) => `\( {String.fromCharCode(65+i)}: \){n}`).join('  ');
 
-    document.getElementById('security-card').style.display = 'block';
-    log('Universal key package generated. Record ALL formats offline before continuing.', 'success');
-  } catch(e) { log('Key generation failed: ' + e.message, 'error'); }
+      document.getElementById('security-card').style.display = 'block';
+      log('Universal key package generated successfully.', 'success');
+    } catch(e) {
+      log('Key generation failed: ' + e.message, 'error');
+    }
+  }, 100);
 }
 
 async function loadWallet() {
-    const btn = document.getElementById('btn-load');
-    try {
-        btn.disabled = true;
-        log('Deriving wallet from input...', 'info');
+  const btn = document.getElementById('btn-load');
+  showProcessing("Loading and verifying wallet");
+  btn.disabled = true;
 
-        if(entryMode === 'num') {
-            const rows = [];
-            for(let i=0; i<8; i++) {
-                if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — must be exactly 6 digits`);
-                rows.push(parseInt(document.getElementById(`sec-${i}`).value.trim()));
-            }
-            const entropy = new Uint8Array(24);
-            rows.forEach((val, i) => {
-                entropy[i*3]   = (val >> 16) & 0xFF;
-                entropy[i*3+1] = (val >> 8)  & 0xFF;
-                entropy[i*3+2] = val & 0xFF;
-            });
-            activeWallet = xrpl.Wallet.fromEntropy(entropy);
-        } else {
-            const secret = document.getElementById('secret-input').value.trim();
-            activeWallet = secret.includes(' ') 
-                ? xrpl.Wallet.fromMnemonic(secret) 
-                : xrpl.Wallet.fromSeed(secret);
-        }
-
-        log(`Derived address: ${activeWallet.address}`, 'info');
-
-        // More reliable servers + extra fallback
-        const servers = currentNet === 'main' 
-            ? ['wss://s1.ripple.com', 'wss://s2.ripple.com', 'wss://xrplcluster.com', 'wss://xrpl.ws']
-            : ['wss://s.altnet.rippletest.net:51233'];
-
-        let client = null;
-        for (let url of servers) {
-            try {
-                log(`Trying ${url}...`, 'info');
-                client = new xrpl.Client(url, { connectionTimeout: 8000 });
-                await client.connect();
-                log(`Connected to ${url}`, 'success');
-                break;
-            } catch (err) {
-                log(`Failed ${url}`, 'error');
-                if (client) await client.disconnect().catch(() => {});
-                client = null;
-            }
-        }
-
-        if (!client) throw new Error('Could not connect to any XRPL server. Please wait 10-20 seconds and try again.');
-
-        const info = await client.request({ 
-            command: 'account_info', 
-            account: activeWallet.address 
-        });
-
-        document.getElementById('res-addr').textContent = activeWallet.address;
-        document.getElementById('res-bal').textContent = 
-            (info.result.account_data.Balance / 1000000).toFixed(2) + " XRP";
-        document.getElementById('account-info').style.display = 'grid';
-
-        await client.disconnect();
-        completeStep(2);
-
-    } catch(e) { 
-        log(e.message || e, "error"); 
-        btn.disabled = false; 
+  try {
+    if(entryMode === 'num') {
+      const rows = [];
+      for(let i=0; i<8; i++) {
+        if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid`);
+        rows.push(parseInt(document.getElementById(`sec-${i}`).value.trim()));
+      }
+      const entropy = new Uint8Array(24);
+      rows.forEach((val, i) => {
+        entropy[i*3]   = (val >> 16) & 0xFF;
+        entropy[i*3+1] = (val >> 8)  & 0xFF;
+        entropy[i*3+2] = val & 0xFF;
+      });
+      activeWallet = xrpl.Wallet.fromEntropy(entropy);
+    } else {
+      const secret = document.getElementById('secret-input').value.trim();
+      activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
     }
+
+    log(`Derived address: ${activeWallet.address}`, 'info');
+
+    const servers = currentNet === 'main' 
+      ? ['wss://s1.ripple.com', 'wss://s2.ripple.com', 'wss://xrplcluster.com', 'wss://xrpl.ws']
+      : ['wss://s.altnet.rippletest.net:51233'];
+
+    let client = null;
+    for (let url of servers) {
+      try {
+        log(`Trying server ${url}...`, 'info');
+        client = new xrpl.Client(url, { connectionTimeout: 10000 });
+        await client.connect();
+        log('Connected successfully', 'success');
+        break;
+      } catch (err) {
+        log(`Failed ${url}`, 'error');
+        if (client) await client.disconnect().catch(() => {});
+        client = null;
+      }
+    }
+
+    if (!client) throw new Error('Could not connect to any XRPL server. Try again in a few seconds.');
+
+    const info = await client.request({ command: 'account_info', account: activeWallet.address });
+    document.getElementById('res-addr').textContent = activeWallet.address;
+    document.getElementById('res-bal').textContent = (info.result.account_data.Balance / 1000000).toFixed(2) + " XRP";
+    document.getElementById('account-info').style.display = 'grid';
+
+    await client.disconnect();
+    completeStep(2);
+  } catch(e) {
+    log(e.message || e, "error");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function completeStep(n) {
-    const cur = document.getElementById(`step-${n}`);
-    if (cur) {
-        cur.classList.remove('active');
-        cur.classList.add('completed');
-    }
-    const next = document.getElementById(`step-${n+1}`);
-    if(next) { 
-        next.classList.remove('locked'); 
-        next.classList.add('active'); 
-        next.scrollIntoView({behavior:'smooth'}); 
-    }
+  const cur = document.getElementById(`step-${n}`);
+  if (cur) {
+    cur.classList.remove('active');
+    cur.classList.add('completed');
+  }
+  const next = document.getElementById(`step-${n+1}`);
+  if (next) {
+    next.classList.remove('locked');
+    next.classList.add('active');
+    next.scrollIntoView({behavior:'smooth'});
+  }
 }
 
 function onSavedCheckbox() {
@@ -477,50 +530,50 @@ function onSavedCheckbox() {
 }
 
 async function executeRekey() {
-    if (!activeWallet) return log('Load source wallet first (Step 2).', 'error');
-    const newKey = document.getElementById('target-r').textContent;
-    if (!newKey || !newKey.startsWith('r')) return log('Generate new key first (Step 3).', 'error');
+  showProcessing("Submitting rekey transaction");
+  if (!activeWallet) return log('Load source wallet first.', 'error');
+  const newKey = document.getElementById('target-r').textContent;
+  if (!newKey.startsWith('r')) return log('Generate new key first.', 'error');
 
-    const client = new xrpl.Client(NETS[currentNet], { connectionTimeout: 8000 });
-    try {
-        await client.connect();
-        const tx = { TransactionType: "SetRegularKey", Account: activeWallet.address, RegularKey: newKey };
-        const prepared = await client.autofill(tx);
-        const signed = activeWallet.sign(prepared);
-        const res = await client.submitAndWait(signed.tx_blob);
-        log("REKEY RESULT: " + res.result.meta.TransactionResult, "success");
-        document.getElementById('confirm-new-addr').textContent = newKey;
-        await client.disconnect();
-        completeStep(4);
-    } catch(e) { 
-        log('Rekey error: ' + (e.message || e), "error"); 
-        await client.disconnect().catch(() => {});
+  const client = new xrpl.Client(NETS[currentNet], { connectionTimeout: 10000 });
+  try {
+    await client.connect();
+    const tx = { TransactionType: "SetRegularKey", Account: activeWallet.address, RegularKey: newKey };
+    const prepared = await client.autofill(tx);
+    const signed = activeWallet.sign(prepared);
+    const res = await client.submitAndWait(signed.tx_blob, { failHard: false });
+    log("REKEY RESULT: " + res.result.meta.TransactionResult, res.result.meta.TransactionResult === 'tesSUCCESS' ? 'success' : 'error');
+    if (res.result.meta.TransactionResult === 'tesSUCCESS') {
+      document.getElementById('confirm-new-addr').textContent = newKey;
+      rekeyCompleted = true;
+      completeStep(4);
     }
+  } catch(e) {
+    log('Rekey error: ' + (e.message || e), 'error');
+  } finally {
+    await client.disconnect().catch(() => {});
+  }
 }
 
 async function disableMasterKey() {
-    if (!document.getElementById('chk-disable-confirm').checked) {
-        return log('You must check the confirmation box.', 'error');
-    }
-    if (!activeWallet) return log('Load source wallet first.', 'error');
+  showProcessing("Submitting disable master key");
+  if (!document.getElementById('chk-disable-confirm').checked) return log('Check the confirmation box.', 'error');
+  if (!activeWallet) return log('Load source wallet first.', 'error');
+  if (!rekeyCompleted) return log('Complete Rekey step first.', 'error');
 
-    const client = new xrpl.Client(NETS[currentNet], { connectionTimeout: 8000 });
-    try {
-        await client.connect();
-        const tx = {
-            TransactionType: "AccountSet",
-            Account: activeWallet.address,
-            SetFlag: 4
-        };
-        const prepared = await client.autofill(tx);
-        const signed = activeWallet.sign(prepared);
-        const res = await client.submitAndWait(signed.tx_blob);
-        log("DISABLE MASTER KEY RESULT: " + res.result.meta.TransactionResult, "success");
-        await client.disconnect();
-    } catch(e) { 
-        log('Disable error: ' + (e.message || e), "error"); 
-        await client.disconnect().catch(() => {});
-    }
+  const client = new xrpl.Client(NETS[currentNet], { connectionTimeout: 10000 });
+  try {
+    await client.connect();
+    const tx = { TransactionType: "AccountSet", Account: activeWallet.address, SetFlag: 4 };
+    const prepared = await client.autofill(tx);
+    const signed = activeWallet.sign(prepared);
+    const res = await client.submitAndWait(signed.tx_blob);
+    log("DISABLE RESULT: " + res.result.meta.TransactionResult, 'success');
+  } catch(e) {
+    log('Disable error: ' + (e.message || e), 'error');
+  } finally {
+    await client.disconnect().catch(() => {});
+  }
 }
 
 function getWordList() {
