@@ -45,6 +45,52 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 </style>
 </head>
 <body>
+<!-- SPLASH SCREEN -->
+<div id="splash" style="position:fixed; inset:0; background:#000; z-index:999; display:flex; align-items:center; justify-content:center; padding:20px;">
+  <div style="max-width:560px; width:100%; border:1px solid rgba(0,255,0,0.4); padding:32px; background:rgba(5,10,5,0.98); box-shadow:0 0 60px rgba(0,255,0,0.15);">
+    <div style="font-family:'Orbitron',sans-serif; font-size:1.4rem; font-weight:900; color:#00FF00; letter-spacing:4px; text-align:center; margin-bottom:6px; text-shadow:0 0 20px rgba(0,255,0,0.6);">REKEY WIZARD</div>
+    <div style="font-family:'Orbitron',sans-serif; font-size:0.5rem; letter-spacing:6px; color:rgba(0,255,0,0.5); text-align:center; margin-bottom:24px;">POWERED BY XRPMAN PRODUCTIONS</div>
+
+    <div style="border-left:2px solid #00FF00; padding-left:14px; margin-bottom:20px;">
+      <div style="font-size:0.75rem; color:#ccc; line-height:1.8;">
+        This tool lets you <strong style="color:#00FF00;">change the key</strong> that controls your XRPL wallet — without moving your XRP, NFTs, or tokens anywhere.
+      </div>
+    </div>
+
+    <div style="font-family:'Orbitron',sans-serif; font-size:0.55rem; color:rgba(0,255,0,0.6); letter-spacing:2px; margin-bottom:10px;">HOW IT WORKS</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; font-size:0.72rem; color:#ccc; line-height:1.6;">
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">01</span>
+        <span><strong style="color:#fff;">Connect</strong> — Choose Mainnet or Testnet</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">02</span>
+        <span><strong style="color:#fff;">Load your compromised wallet</strong> — Enter the seed or phrase for the account you want to secure. This proves you own it.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">03</span>
+        <span><strong style="color:#fff;">Set the new key</strong> — Generate a fresh wallet or use one you already have. This becomes the new lock on your account.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#00FF00; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">04</span>
+        <span><strong style="color:#fff;">Broadcast</strong> — Sends the rekey transaction to the XRP Ledger. Your address stays the same — only the key changes.</span>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <span style="color:#ff3333; font-family:'Orbitron',sans-serif; font-size:0.7rem; flex-shrink:0;">05</span>
+        <span><strong style="color:#fff;">Disable old key</strong> — Permanently locks out the old compromised seed. Only do this after saving your new key securely.</span>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,51,51,0.08); border:1px solid rgba(255,51,51,0.4); padding:12px; margin-bottom:20px; font-size:0.68rem; color:#ffaa00; line-height:1.6;">
+      ⚠ Your secrets never leave your device. All signing happens locally in your browser. Never share your seed or secret numbers with anyone.
+    </div>
+
+    <button onclick="document.getElementById('splash').style.display='none'" style="width:100%; background:#00FF00; color:#000; border:none; padding:16px; font-family:'Orbitron',sans-serif; font-weight:900; font-size:0.75rem; letter-spacing:3px; cursor:pointer; text-transform:uppercase;">
+      ENTER REKEY WIZARD →
+    </button>
+  </div>
+</div>
+
 <div class="wizard-container">
   <div class="header"><div class="title">REKEY WIZARD V7</div></div>
 
@@ -69,26 +115,8 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
         <select id="wallet-select" onchange="applySelection()"></select>
     </div>
 
-    <div style="display:flex; gap:5px; margin-bottom:15px;">
-        <button id="mode-num" class="btn-toggle active" onclick="setEntryMode('num')">SECRET NUMBERS</button>
-        <button id="mode-text" class="btn-toggle" onclick="setEntryMode('text')">SEED/MNEMONIC</button>
-    </div>
-
-    <div id="num-entry">
-        <div class="secret-grid-input">
-            <input type="text" id="sec-0" placeholder="A" maxlength="6" oninput="validateRow(0)">
-            <input type="text" id="sec-1" placeholder="B" maxlength="6" oninput="validateRow(1)">
-            <input type="text" id="sec-2" placeholder="C" maxlength="6" oninput="validateRow(2)">
-            <input type="text" id="sec-3" placeholder="D" maxlength="6" oninput="validateRow(3)">
-            <input type="text" id="sec-4" placeholder="E" maxlength="6" oninput="validateRow(4)">
-            <input type="text" id="sec-5" placeholder="F" maxlength="6" oninput="validateRow(5)">
-            <input type="text" id="sec-6" placeholder="G" maxlength="6" oninput="validateRow(6)">
-            <input type="text" id="sec-7" placeholder="H" maxlength="6" oninput="validateRow(7)">
-        </div>
-    </div>
-    
-    <div id="text-entry" style="display:none">
-        <textarea id="secret-input" placeholder="s... or 12/24 words" rows="2"></textarea>
+    <div id="text-entry">
+        <textarea id="secret-input" placeholder="Family seed (s...) or 12/24 word mnemonic phrase" rows="3"></textarea>
     </div>
     
     <button class="action-btn" id="btn-load" onclick="loadWallet()">Verify Source Authority</button>
@@ -242,7 +270,7 @@ input, textarea, select { width: 100%; background: #000; border: 1px solid #333;
 <script>
 let currentNet = 'main';
 let activeWallet = null;
-let entryMode = 'num';
+
 const NETS = { main: 'wss://xrplcluster.com' };
 
 function log(m, t='info') {
@@ -254,13 +282,7 @@ function log(m, t='info') {
 
 // Network locked to MAINNET only
 
-function setEntryMode(m) {
-    entryMode = m;
-    document.getElementById('num-entry').style.display = m === 'num' ? 'block' : 'none';
-    document.getElementById('text-entry').style.display = m === 'text' ? 'block' : 'none';
-    document.getElementById('mode-num').classList.toggle('active', m==='num');
-    document.getElementById('mode-text').classList.toggle('active', m==='text');
-}
+// setEntryMode removed — seed/mnemonic only
 
 function handleFile(e) {
   const file = e.target.files[0];
@@ -440,26 +462,9 @@ async function loadWallet() {
     const btn = document.getElementById('btn-load');
     try {
         btn.disabled = true;
-        if(entryMode === 'num') {
-            for(let i=0; i<8; i++) {
-                if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — must be exactly 6 digits`);
-            }
-            // Xaman: first 4 digits = value (0-9999), reverse floor(x/6.5536) to get 2 bytes
-            // 8 groups x 2 bytes = 16 bytes entropy, secp256k1 algorithm (Xaman default)
-            const entropy = new Uint8Array(16);
-            for(let i=0; i<8; i++) {
-                const v      = document.getElementById(`sec-${i}`).value.trim();
-                const val    = parseInt(v.substring(0, 4));
-                const rowVal = Math.round(val * 6.5536);
-                entropy[i*2]   = (rowVal >> 8) & 0xFF;
-                entropy[i*2+1] = rowVal & 0xFF;
-            }
-            log('Entropy reconstructed. Deriving wallet via secp256k1...', 'info');
-            activeWallet = xrpl.Wallet.fromEntropy(entropy, { algorithm: 'ecdsa-secp256k1' });
-        } else {
-            const secret = document.getElementById('secret-input').value.trim();
-            activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
-        }
+        const secret = document.getElementById('secret-input').value.trim();
+        if(!secret) throw new Error('Please enter your family seed or mnemonic phrase.');
+        activeWallet = secret.includes(' ') ? xrpl.Wallet.fromMnemonic(secret) : xrpl.Wallet.fromSeed(secret);
 
         // Show derived address IMMEDIATELY so user can verify it matches their wallet
         document.getElementById('res-addr').textContent = activeWallet.address;
