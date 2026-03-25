@@ -375,19 +375,21 @@ async function loadWallet() {
     try {
         btn.disabled = true;
         if(entryMode === 'num') {
-            const rows = [];
             for(let i=0; i<8; i++) {
                 if(!validateRow(i)) throw new Error(`Field ${String.fromCharCode(65+i)} is invalid — must be exactly 6 digits`);
-                rows.push(parseInt(document.getElementById(`sec-${i}`).value.trim()));
             }
-            // Reconstruct entropy: each 6-digit number came from a 3-byte chunk (val % 1000000)
-            // We reverse by treating the number directly as a 3-byte big-endian value
-            const entropy = new Uint8Array(24);
-            rows.forEach((val, i) => {
-                entropy[i*3]   = (val >> 16) & 0xFF;
-                entropy[i*3+1] = (val >> 8)  & 0xFF;
-                entropy[i*3+2] = val & 0xFF;
-            });
+            // REAL Xaman reconstruction:
+            // Each 6-digit number: first 4 digits = value (0-9999), last 2 = checksum (ignored for derivation)
+            // Original entropy: val = floor(rowVal / 6.5536), so rowVal = round(val * 6.5536)
+            // 8 values × 2 bytes each = 16 bytes of entropy → family seed
+            const entropy = new Uint8Array(16);
+            for(let i=0; i<8; i++) {
+                const v = document.getElementById(`sec-${i}`).value.trim();
+                const val    = parseInt(v.substring(0, 4));          // first 4 digits only
+                const rowVal = Math.round(val * 6.5536);             // reverse the floor(x/6.5536)
+                entropy[i*2]   = (rowVal >> 8) & 0xFF;
+                entropy[i*2+1] = rowVal & 0xFF;
+            }
             activeWallet = xrpl.Wallet.fromEntropy(entropy);
         } else {
             const secret = document.getElementById('secret-input').value.trim();
