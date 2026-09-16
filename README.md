@@ -171,14 +171,26 @@ cannot recur.
 
 ### Deployment
 
-`frame-ancestors` is absent from the `<meta>` policy because browsers ignore it there.
-Serve these as real headers:
+`frame-ancestors` is absent from the `<meta>` policy because browsers ignore it there — it
+only works as a real header. `vercel.json` ships that header and the rest of the set:
 
 ```
 Content-Security-Policy: frame-ancestors 'none'
 X-Frame-Options: DENY
 Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=(), ...
 ```
+
+A header CSP and the `<meta>` CSP both apply and a browser enforces their intersection, so
+the header carries `frame-ancestors` alone and the page's own policy still governs
+everything else. `Permissions-Policy` deliberately leaves clipboard access alone — step 08
+copies the audit report.
+
+Serving this anywhere other than Vercel means porting those headers to that host; the
+`<meta>` policy alone does not cover framing.
 
 ---
 
